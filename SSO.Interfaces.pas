@@ -41,6 +41,7 @@ type
     procedure SetFallbackMode(const Mode: TFallbackMode);
 
     function GetUPN: string;
+    function GetUserInfo: IWindowsUserInfo;
   end;
 
   TUPN = class

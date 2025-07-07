@@ -13,7 +13,6 @@ type
 
   TSingleSignOn = class(TInterfacedObject, ISingleSignOn)
   public
-    constructor Create;
     procedure CheckUser(const Action: TProc<IWindowsUserInfo>);
   end;
 
@@ -29,7 +28,7 @@ uses SSO.Windows
 
 class procedure TSimpleSingleSignOn.CheckUser(const Action: TProc<IWindowsUserInfo>);
 var
-  SingleSignOn: TSingleSignOn;
+  SingleSignOn: ISingleSignOn;
 begin
   SingleSignOn := TSingleSignOn.Create;
   SingleSignOn.CheckUser(Action);
@@ -39,7 +38,7 @@ end;
 
 procedure TSingleSignOn.CheckUser(const Action: TProc<IWindowsUserInfo>);
 var
-  SSOWindows: TSSOWindows;
+  SSOWindows: ISSOComposite;
   UserInfo: IWindowsUserInfo;
 begin
   if not Assigned(Action) then
@@ -49,14 +48,6 @@ begin
   UserInfo := SSOWindows.GetUserInfo;
 
   Action(UserInfo);
-end;
-
-constructor TSingleSignOn.Create;
-begin
-  inherited;
-{$ifdef TRIAL}
-  ShowMessage('This is a trial version of the Delphi Single-Sign-On Module. Please consider buying the software.');
-{$endif}
 end;
 
 end.
