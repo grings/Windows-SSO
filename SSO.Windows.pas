@@ -17,12 +17,13 @@ type
     procedure SetFallbackMode(const Mode: TFallbackMode);
 
     function GetUPN: string;
+    function GetUserInfo: IWindowsUserInfo;
   end;
 
 implementation
 
 uses
-  SSO.NetAPI32, SSO.Secur32, SSO.Envvars;
+  SSO.NetAPI32, SSO.Secur32, SSO.Envvars, SSO.WindowsUserInfo;
 
 { TSSOWindows }
 
@@ -45,40 +46,41 @@ end;
 
 function TSSOWindows.GetUPN: string;
 var
+  UserInfo: IWindowsUserInfo;
+begin
+  UserInfo := GetUserInfo;
+
+  if UserInfo.UserFound then
+    Result := UserInfo.FullQualifiedUserName
+  else
+    raise ESSOException.Create('Could not determine the current Windows user.');
+end;
+
+function TSSOWindows.GetUserInfo: IWindowsUserInfo;
+var
   Username, Domain: string;
   SecurQuery: ISSOQuery;
   NTQuery: ISSOQuery;
   EnvQuery: ISSOQuery;
+  UserFound: Boolean;
 begin
-  Result := '';
-
   SecurQuery := TSSOSecur32Query.Create;
-  if SecurQuery.TryGetUsername(Username, Domain) then
+  UserFound := SecurQuery.TryGetUsername(Username, Domain);
+
+  if not(UserFound) then
   begin
-    Result := TUPN.Format(Username, Domain);
-    Exit;
+    NTQuery := TSSONetAPI32Query.Create;
+    UserFound := NTQuery.TryGetUsername(Username, Domain);
   end;
 
-  NTQuery := TSSONetAPI32Query.Create;
-  if NTQuery.TryGetUsername(Username, Domain) then
-  begin
-    Result := TUPN.Format(Username, Domain);
-    Exit;
-  end;
-
-  if FFallbackMode = TFallbackMode.AlwaysReturnSomething then
+  if not(UserFound) and (FFallbackMode = TFallbackMode.AlwaysReturnSomething) then
   begin
     EnvQuery := TSSOEnvvarsQuery.Create;
 
-    if EnvQuery.TryGetUsername(Username, Domain) then
-    begin
-      Result := TUPN.Format(Username, Domain);
-    end;
-  end
-  else
-  begin
-    raise ESSOException.Create('Could not determine UPN');
+    UserFound := EnvQuery.TryGetUsername(Username, Domain);
   end;
+
+  Result := TWindowsUserInfo.Create(Username, Domain, UserFound);
 end;
 
 end.
